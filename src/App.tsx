@@ -1,27 +1,54 @@
+
+import React, { useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import ApiKeyScreen from './pages/ApiKeyScreen';
+import HomeScreen from './pages/HomeScreen';
+import ConversationScreen from './pages/ConversationScreen';
 
-const queryClient = new QueryClient();
+type Screen = 'api-key' | 'home' | 'conversation';
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+const App = () => {
+  const [currentScreen, setCurrentScreen] = useState<Screen>('api-key');
+  const [apiKey, setApiKey] = useState<string | null>(null);
+
+  const handleApiKeyValidation = (key: string) => {
+    setApiKey(key);
+    setCurrentScreen('home');
+  };
+
+  const renderScreen = () => {
+    switch (currentScreen) {
+      case 'api-key':
+        return <ApiKeyScreen onValidApiKey={handleApiKeyValidation} />;
+      case 'home':
+        return (
+          <HomeScreen 
+            onStartConversation={() => setCurrentScreen('conversation')}
+            onChangeApiKey={() => setCurrentScreen('api-key')}
+          />
+        );
+      case 'conversation':
+        return (
+          <ConversationScreen 
+            onHome={() => setCurrentScreen('home')}
+          />
+        );
+      default:
+        return <ApiKeyScreen onValidApiKey={handleApiKeyValidation} />;
+    }
+  };
+
+  return (
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <div className="min-h-screen bg-[#1A1A1A]">
+        {renderScreen()}
+        <Toaster />
+        <Sonner />
+      </div>
     </TooltipProvider>
-  </QueryClientProvider>
-);
+  );
+};
 
 export default App;
