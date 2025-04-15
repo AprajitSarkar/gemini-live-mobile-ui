@@ -1,3 +1,4 @@
+
 import { EventEmitter } from '../utils/eventEmitter';
 
 // Interface with the global GeminiAgent class from script.js
@@ -117,10 +118,12 @@ class GeminiService extends EventEmitter {
         return false;
       }
       
-      const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
+      // Updated WebSocket URL based on user input
+      const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${apiKey}`;
       
       const config = {
-        model: "models/gemini-2.0-flash-exp",
+        // Updated model name based on user input
+        model: "models/gemini-2.0-flash-live-001",
         generationConfig: {
           temperature: 0.4,
           maxOutputTokens: 8192,
