@@ -38,6 +38,9 @@ class GeminiService extends EventEmitter {
         return false;
       }
       
+      // Save API key to localStorage so script.js can access it
+      localStorage.setItem('apiKey', apiKey);
+      
       const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
       
       const config = {
