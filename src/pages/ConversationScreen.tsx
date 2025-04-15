@@ -1,6 +1,7 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { 
   Mic, 
   MicOff, 
@@ -9,12 +10,15 @@ import {
   Home, 
   Pause, 
   Play, 
-  RotateCcw 
+  RotateCcw, 
+  Send,
+  Settings
 } from 'lucide-react';
 import { VoiceVisualizer } from '@/components/ui/VoiceVisualizer';
 import { ConversationState, VideoState } from '@/types/gemini';
 import { geminiService } from '@/services/GeminiService';
 import { toast } from '@/hooks/use-toast';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 interface ConversationScreenProps {
   onHome: () => void;
@@ -36,6 +40,9 @@ const ConversationScreen: React.FC<ConversationScreenProps> = ({ onHome }) => {
   
   const [aiSpeaking, setAiSpeaking] = useState(false);
   const [speakingIntensity, setSpeakingIntensity] = useState(0.5);
+  const [textInput, setTextInput] = useState('');
+  const [showTextInput, setShowTextInput] = useState(false);
+  const textInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let timer: number;
@@ -128,6 +135,12 @@ const ConversationScreen: React.FC<ConversationScreenProps> = ({ onHome }) => {
     };
   }, [onHome]);
 
+  useEffect(() => {
+    if (showTextInput && textInputRef.current) {
+      textInputRef.current.focus();
+    }
+  }, [showTextInput]);
+
   const toggleMic = useCallback(() => {
     geminiService.toggleMic();
   }, []);
@@ -149,6 +162,23 @@ const ConversationScreen: React.FC<ConversationScreenProps> = ({ onHome }) => {
     
     // TODO: Implement pause/resume functionality when available in GeminiService
   }, []);
+
+  const toggleTextInput = useCallback(() => {
+    setShowTextInput(prev => !prev);
+  }, []);
+
+  const handleSendText = useCallback(() => {
+    if (!textInput.trim()) return;
+    
+    geminiService.sendText(textInput);
+    setTextInput('');
+  }, [textInput]);
+
+  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSendText();
+    }
+  }, [handleSendText]);
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -216,6 +246,28 @@ const ConversationScreen: React.FC<ConversationScreenProps> = ({ onHome }) => {
         </div>
       </div>
 
+      {/* Text Input (conditionally rendered) */}
+      {showTextInput && (
+        <div className="bg-black/70 p-3 flex items-center space-x-2">
+          <Input
+            ref={textInputRef}
+            type="text"
+            placeholder="Type your message..."
+            value={textInput}
+            onChange={(e) => setTextInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            className="bg-gray-800 border-gray-700 text-white"
+          />
+          <Button 
+            size="icon" 
+            onClick={handleSendText} 
+            className="bg-[#10A37F] hover:bg-[#1ABF9C] text-white"
+          >
+            <Send size={18} />
+          </Button>
+        </div>
+      )}
+
       {/* Control Tray */}
       <div className="bg-black/40 p-4 flex justify-around items-center">
         <Button 
@@ -249,11 +301,69 @@ const ConversationScreen: React.FC<ConversationScreenProps> = ({ onHome }) => {
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={togglePause}
-          className="text-white hover:bg-white/10 rounded-full"
+          onClick={toggleTextInput}
+          className={`
+            text-white 
+            hover:bg-white/10 
+            rounded-full
+            ${showTextInput ? 'bg-white/20' : ''}
+          `}
         >
-          {conversationState.isPaused ? <Play /> : <Pause />}
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="24" 
+            height="24" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
         </Button>
+
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-white hover:bg-white/10 rounded-full"
+            >
+              <Settings />
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="bg-[#1A1A1A] border-gray-800 text-white">
+            <SheetHeader>
+              <SheetTitle className="text-white">Settings</SheetTitle>
+            </SheetHeader>
+            <div className="py-6 space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium">API Settings</h3>
+                <Button 
+                  onClick={handleGoHome}
+                  variant="outline" 
+                  className="w-full border-gray-700 text-gray-300 hover:bg-gray-800"
+                >
+                  Change API Key
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium">Conversation</h3>
+                <Button 
+                  onClick={togglePause}
+                  variant="outline" 
+                  className="w-full border-gray-700 text-gray-300 hover:bg-gray-800"
+                >
+                  {conversationState.isPaused ? 'Resume Conversation' : 'Pause Conversation'}
+                </Button>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
 
         <div className="flex items-center justify-center h-10 w-20">
           <VoiceVisualizer 

@@ -20,3 +20,10 @@ export interface VoiceVisualizerProps {
   isActive: boolean;
   intensity?: number;
 }
+
+export interface SettingsState {
+  showSettings: boolean;
+  micEnabled: boolean;
+  cameraEnabled: boolean;
+  autoPlayEnabled: boolean;
+}
