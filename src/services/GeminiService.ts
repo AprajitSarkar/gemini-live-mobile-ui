@@ -1,4 +1,3 @@
-
 import { EventEmitter } from '../utils/eventEmitter';
 
 // Interface with the global GeminiAgent class from script.js
@@ -12,10 +11,10 @@ interface GeminiAgentConfig {
   modelSampleRate?: number;
 }
 
+// Extend the global Window interface
 declare global {
   interface Window {
     GeminiAgent: new (config: GeminiAgentConfig) => any;
-    EventEmitter: new () => any;
     ToolManager: new () => any;
   }
 }
@@ -29,8 +28,7 @@ class GeminiService extends EventEmitter {
   
   constructor() {
     super();
-    // Check if script is already loaded
-    this.checkScriptLoaded();
+    // We'll check for script loading in the initialize method
   }
   
   private checkScriptLoaded(): boolean {
@@ -61,18 +59,10 @@ class GeminiService extends EventEmitter {
       
       console.log(`Attempting to load script.js (attempt ${this.scriptLoadAttempts})`);
       
-      // Check if the script tag already exists
+      // Remove any existing script to avoid conflicts
       const existingScript = document.querySelector('script[src="/src/script.js"]');
       if (existingScript) {
-        console.log("Script tag already exists, waiting for load");
-        setTimeout(() => {
-          if (this.checkScriptLoaded()) {
-            resolve(true);
-          } else {
-            resolve(this.loadScript());
-          }
-        }, 1000);
-        return;
+        existingScript.remove();
       }
       
       // Create script element
@@ -105,7 +95,13 @@ class GeminiService extends EventEmitter {
     
     try {
       // Save API key to localStorage so script.js can access it
-      localStorage.setItem('apiKey', apiKey);
+      if (apiKey) {
+        localStorage.setItem('apiKey', apiKey);
+        console.log("API key saved to localStorage in GeminiService");
+      } else {
+        console.error("No API key provided");
+        return false;
+      }
       
       // Make sure script is loaded
       if (!this.scriptLoaded) {

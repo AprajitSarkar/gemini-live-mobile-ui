@@ -29,6 +29,14 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
         setIsLoading(false);
       } else {
         console.log("Waiting for Gemini script to load...");
+        // Try to load the script directly
+        if (!document.querySelector('script[src="/src/script.js"]')) {
+          const script = document.createElement('script');
+          script.src = '/src/script.js';
+          script.async = true;
+          document.head.appendChild(script);
+          console.log("Attempted to load script.js manually");
+        }
         setTimeout(checkScriptLoaded, 500);
       }
     };
@@ -52,6 +60,7 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
     try {
       // Save API key to localStorage BEFORE attempting to initialize
       localStorage.setItem('apiKey', apiKey);
+      console.log("API key saved to localStorage:", apiKey);
       
       // Initialize the GeminiService with the provided API key
       const isInitialized = await geminiService.initialize(apiKey);

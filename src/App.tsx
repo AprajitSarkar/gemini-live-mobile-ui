@@ -7,6 +7,7 @@ import ApiKeyScreen from './pages/ApiKeyScreen';
 import HomeScreen from './pages/HomeScreen';
 import ConversationScreen from './pages/ConversationScreen';
 import { geminiService } from './services/GeminiService';
+import { toast } from '@/hooks/use-toast';
 
 type Screen = 'api-key' | 'home' | 'conversation';
 
@@ -14,44 +15,43 @@ const App = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('api-key');
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
 
   useEffect(() => {
     // Check for existing API key in localStorage
     const savedApiKey = localStorage.getItem('apiKey');
     
-    // Check if the script is loaded
-    const checkScriptLoaded = () => {
-      if (window.GeminiAgent) {
-        console.log("GeminiAgent detected in window object");
-        setScriptLoaded(true);
-        
-        if (savedApiKey) {
-          // Verify if the saved API key is valid
-          geminiService.initialize(savedApiKey)
-            .then(isValid => {
-              if (isValid) {
-                setApiKey(savedApiKey);
-                setCurrentScreen('home');
-              } else {
-                // If API key is not valid, stay on API key screen
-                localStorage.removeItem('apiKey');
-              }
-              setIsLoading(false);
-            })
-            .catch(() => {
-              setIsLoading(false);
+    if (savedApiKey) {
+      console.log("Found saved API key, attempting to initialize...");
+      
+      // Try to initialize with the saved API key
+      geminiService.initialize(savedApiKey)
+        .then(isValid => {
+          if (isValid) {
+            console.log("API key validated, proceeding to home screen");
+            setApiKey(savedApiKey);
+            setCurrentScreen('home');
+          } else {
+            console.error("Saved API key is invalid");
+            // If API key is not valid, stay on API key screen
+            localStorage.removeItem('apiKey');
+            toast({
+              title: "Invalid API Key",
+              description: "Your saved API key is invalid. Please enter a new one.",
+              variant: "destructive",
             });
-        } else {
+          }
+        })
+        .catch(error => {
+          console.error("Error initializing with saved API key:", error);
+          localStorage.removeItem('apiKey');
+        })
+        .finally(() => {
           setIsLoading(false);
-        }
-      } else {
-        console.log("GeminiAgent not detected, waiting...");
-        setTimeout(checkScriptLoaded, 500);
-      }
-    };
-    
-    checkScriptLoaded();
+        });
+    } else {
+      console.log("No saved API key found");
+      setIsLoading(false);
+    }
   }, []);
 
   const handleApiKeyValidation = (key: string) => {
