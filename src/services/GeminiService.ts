@@ -7,6 +7,9 @@ interface GeminiAgentConfig {
   url: string;
   config: any;
   toolManager?: any;
+  transcribeModelsSpeech?: boolean;
+  transcribeUsersSpeech?: boolean;
+  modelSampleRate?: number;
 }
 
 declare global {
