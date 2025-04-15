@@ -23,23 +23,72 @@ declare global {
 class GeminiService extends EventEmitter {
   private agent: any = null;
   private isInitialized = false;
+  private scriptLoaded = false;
   
   constructor() {
     super();
-    // We'll initialize when requested to avoid errors if script isn't loaded yet
+    // Check if script is already loaded
+    this.checkScriptLoaded();
+  }
+  
+  private checkScriptLoaded(): boolean {
+    this.scriptLoaded = typeof window !== 'undefined' && !!window.GeminiAgent;
+    return this.scriptLoaded;
+  }
+  
+  private loadScript(): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (this.checkScriptLoaded()) {
+        resolve(true);
+        return;
+      }
+      
+      console.log("Attempting to load script.js");
+      
+      // Create script element
+      const script = document.createElement('script');
+      script.src = '/src/script.js';
+      script.async = true;
+      
+      script.onload = () => {
+        console.log("script.js loaded successfully");
+        this.scriptLoaded = true;
+        resolve(true);
+      };
+      
+      script.onerror = () => {
+        console.error("Failed to load script.js");
+        resolve(false);
+      };
+      
+      // Add to document
+      document.head.appendChild(script);
+    });
   }
   
   public async initialize(apiKey: string): Promise<boolean> {
     if (this.isInitialized) return true;
     
     try {
+      // Save API key to localStorage so script.js can access it
+      localStorage.setItem('apiKey', apiKey);
+      
+      // Make sure script is loaded
+      if (!this.scriptLoaded) {
+        const loaded = await this.loadScript();
+        if (!loaded) {
+          console.error("Could not load script.js");
+          return false;
+        }
+        
+        // Give script time to initialize
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
       if (!window.GeminiAgent) {
         console.error("GeminiAgent not found. Make sure script.js is properly loaded.");
         return false;
       }
-      
-      // Save API key to localStorage so script.js can access it
-      localStorage.setItem('apiKey', apiKey);
       
       const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
       

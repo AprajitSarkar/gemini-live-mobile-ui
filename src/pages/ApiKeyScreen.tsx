@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ApiKeyScreenProps } from '@/types/gemini';
-import { Bot, Key } from 'lucide-react';
+import { Bot, Key, Loader2 } from 'lucide-react';
 import { geminiService } from '@/services/GeminiService';
 import { toast } from '@/hooks/use-toast';
 
@@ -11,6 +11,22 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
   const [apiKey, setApiKey] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if we have a saved API key
+    const savedApiKey = localStorage.getItem('apiKey');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+    }
+    
+    // Small delay to ensure scripts are loaded
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleValidation = async () => {
     if (!apiKey.trim()) {
@@ -26,9 +42,6 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
       const isInitialized = await geminiService.initialize(apiKey);
       
       if (isInitialized) {
-        // Save API key to localStorage for persistence
-        localStorage.setItem('apiKey', apiKey);
-        
         // Notify the parent component
         onValidApiKey(apiKey);
         
@@ -55,6 +68,17 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
       setIsValidating(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#1A1A1A] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-8 w-8 text-[#10A37F] animate-spin" />
+          <p className="text-white mt-4">Loading Gemini components...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#1A1A1A] flex items-center justify-center p-4">
@@ -109,7 +133,12 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
               active:scale-95
             "
           >
-            {isValidating ? 'Validating...' : 'Continue'}
+            {isValidating ? (
+              <div className="flex items-center">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span>Validating...</span>
+              </div>
+            ) : 'Continue'}
           </Button>
 
           <div className="text-center mt-4">
