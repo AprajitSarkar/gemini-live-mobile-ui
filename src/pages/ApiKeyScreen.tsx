@@ -12,6 +12,7 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [scriptStatus, setScriptStatus] = useState('loading');
 
   useEffect(() => {
     // Check if we have a saved API key
@@ -20,12 +21,23 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
       setApiKey(savedApiKey);
     }
     
-    // Small delay to ensure scripts are loaded
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    // Check if script.js is loaded
+    const checkScriptLoaded = () => {
+      if (typeof window !== 'undefined' && window.GeminiAgent) {
+        console.log("Gemini script is loaded and ready");
+        setScriptStatus('loaded');
+        setIsLoading(false);
+      } else {
+        console.log("Waiting for Gemini script to load...");
+        setTimeout(checkScriptLoaded, 500);
+      }
+    };
     
-    return () => clearTimeout(timer);
+    checkScriptLoaded();
+    
+    return () => {
+      // Cleanup
+    };
   }, []);
 
   const handleValidation = async () => {
@@ -38,6 +50,9 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
     setError('');
     
     try {
+      // Save API key to localStorage BEFORE attempting to initialize
+      localStorage.setItem('apiKey', apiKey);
+      
       // Initialize the GeminiService with the provided API key
       const isInitialized = await geminiService.initialize(apiKey);
       

@@ -24,6 +24,8 @@ class GeminiService extends EventEmitter {
   private agent: any = null;
   private isInitialized = false;
   private scriptLoaded = false;
+  private scriptLoadAttempts = 0;
+  private readonly MAX_LOAD_ATTEMPTS = 5;
   
   constructor() {
     super();
@@ -33,6 +35,11 @@ class GeminiService extends EventEmitter {
   
   private checkScriptLoaded(): boolean {
     this.scriptLoaded = typeof window !== 'undefined' && !!window.GeminiAgent;
+    if (this.scriptLoaded) {
+      console.log("GeminiAgent is available in the global scope");
+    } else {
+      console.log("GeminiAgent is not yet available in the global scope");
+    }
     return this.scriptLoaded;
   }
   
@@ -43,7 +50,30 @@ class GeminiService extends EventEmitter {
         return;
       }
       
-      console.log("Attempting to load script.js");
+      // Increment attempt counter
+      this.scriptLoadAttempts++;
+      
+      if (this.scriptLoadAttempts > this.MAX_LOAD_ATTEMPTS) {
+        console.error(`Failed to load script.js after ${this.MAX_LOAD_ATTEMPTS} attempts`);
+        resolve(false);
+        return;
+      }
+      
+      console.log(`Attempting to load script.js (attempt ${this.scriptLoadAttempts})`);
+      
+      // Check if the script tag already exists
+      const existingScript = document.querySelector('script[src="/src/script.js"]');
+      if (existingScript) {
+        console.log("Script tag already exists, waiting for load");
+        setTimeout(() => {
+          if (this.checkScriptLoaded()) {
+            resolve(true);
+          } else {
+            resolve(this.loadScript());
+          }
+        }, 1000);
+        return;
+      }
       
       // Create script element
       const script = document.createElement('script');
@@ -52,8 +82,12 @@ class GeminiService extends EventEmitter {
       
       script.onload = () => {
         console.log("script.js loaded successfully");
-        this.scriptLoaded = true;
-        resolve(true);
+        
+        // Wait a bit for the script to initialize
+        setTimeout(() => {
+          this.scriptLoaded = this.checkScriptLoaded();
+          resolve(this.scriptLoaded);
+        }, 500);
       };
       
       script.onerror = () => {
@@ -80,9 +114,6 @@ class GeminiService extends EventEmitter {
           console.error("Could not load script.js");
           return false;
         }
-        
-        // Give script time to initialize
-        await new Promise(resolve => setTimeout(resolve, 500));
       }
       
       if (!window.GeminiAgent) {

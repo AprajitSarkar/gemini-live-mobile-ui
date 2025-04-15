@@ -14,22 +14,44 @@ const App = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('api-key');
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
 
   useEffect(() => {
     // Check for existing API key in localStorage
     const savedApiKey = localStorage.getItem('apiKey');
     
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-      setCurrentScreen('home');
-    }
+    // Check if the script is loaded
+    const checkScriptLoaded = () => {
+      if (window.GeminiAgent) {
+        console.log("GeminiAgent detected in window object");
+        setScriptLoaded(true);
+        
+        if (savedApiKey) {
+          // Verify if the saved API key is valid
+          geminiService.initialize(savedApiKey)
+            .then(isValid => {
+              if (isValid) {
+                setApiKey(savedApiKey);
+                setCurrentScreen('home');
+              } else {
+                // If API key is not valid, stay on API key screen
+                localStorage.removeItem('apiKey');
+              }
+              setIsLoading(false);
+            })
+            .catch(() => {
+              setIsLoading(false);
+            });
+        } else {
+          setIsLoading(false);
+        }
+      } else {
+        console.log("GeminiAgent not detected, waiting...");
+        setTimeout(checkScriptLoaded, 500);
+      }
+    };
     
-    setIsLoading(false);
-    
-    // Load script.js dynamically if needed
-    if (!window.GeminiAgent) {
-      console.log("Script.js functionality not detected, it should be loaded from index.html");
-    }
+    checkScriptLoaded();
   }, []);
 
   const handleApiKeyValidation = (key: string) => {
