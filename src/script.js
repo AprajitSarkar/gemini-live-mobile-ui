@@ -65,8 +65,9 @@ function arrayBufferToBase64(buffer) {
 
 /**
  * Simple EventEmitter implementation for handling events.
+ * Renamed to ScriptEventEmitter to avoid conflicts with imported EventEmitter
  */
-class EventEmitter {
+class ScriptEventEmitter {
     constructor() {
         this.events = {};
     }
@@ -99,6 +100,9 @@ class EventEmitter {
         return this.on(event, onceWrapper);
     }
 }
+
+// Make EventEmitter available globally
+window.EventEmitter = ScriptEventEmitter;
 
 /**
  * SECTION 2: AUDIO VISUALIZATION
@@ -241,7 +245,7 @@ class AudioVisualizer {
  * SECTION 3: WEBSOCKET CLIENT
  * Client for interacting with the Gemini API via WebSockets.
  */
-class GeminiWebsocketClient extends EventEmitter {
+class GeminiWebsocketClient extends ScriptEventEmitter {
     constructor(name, url, config) {
         super();
         this.name = name || 'WebSocketClient';
@@ -415,7 +419,7 @@ class GeminiWebsocketClient extends EventEmitter {
  * SECTION 4: AGENT
  * Core application class that orchestrates interactions.
  */
-class GeminiAgent extends EventEmitter {
+class GeminiAgent extends ScriptEventEmitter {
     constructor({
         name = 'GeminiAgent',
         url,
@@ -725,104 +729,71 @@ function getConfig() {
 function getWebsocketUrl() {
     const apiKey = localStorage.getItem('apiKey');
     if (!apiKey) {
-        throw new Error('API key not found. Please set your API key in settings.');
+        console.error("API key not found in localStorage. Please set your API key.");
+        return null;
     }
     return `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${apiKey}`;
 }
 
 function init() {
-    const url = getWebsocketUrl();
-    const config = getConfig();
-    
-    const toolManager = new ToolManager();
-    // Register tools as needed
-    
-    const chatManager = new ChatManager();
-    
-    const geminiAgent = new GeminiAgent({
-        url,
-        config,
-        toolManager
-    });
-    
-    // Handle chat-related events
-    geminiAgent.on('transcription', (transcript) => {
-        chatManager.updateStreamingMessage(transcript);
-    });
-    
-    geminiAgent.on('text_sent', (text) => {
-        chatManager.finalizeStreamingMessage();
-        chatManager.addUserMessage(text);
-    });
-    
-    geminiAgent.on('interrupted', () => {
-        chatManager.finalizeStreamingMessage();
-        if (!chatManager.lastUserMessageType) {
-            chatManager.addUserAudioMessage();
+    try {
+        const url = getWebsocketUrl();
+        if (!url) {
+            console.error("Could not get WebSocket URL. API key might be missing.");
+            return null;
         }
-    });
-    
-    geminiAgent.on('turn_complete', () => {
-        chatManager.finalizeStreamingMessage();
-    });
-    
-    geminiAgent.connect();
-    
-    setupEventListeners(geminiAgent);
-    
-    return geminiAgent;
+        
+        const config = getConfig();
+        
+        const toolManager = new ToolManager();
+        // Register tools as needed
+        
+        const chatManager = new ChatManager();
+        
+        const geminiAgent = new GeminiAgent({
+            url,
+            config,
+            toolManager
+        });
+        
+        // Handle chat-related events
+        geminiAgent.on('transcription', (transcript) => {
+            chatManager.updateStreamingMessage(transcript);
+        });
+        
+        geminiAgent.on('text_sent', (text) => {
+            chatManager.finalizeStreamingMessage();
+            chatManager.addUserMessage(text);
+        });
+        
+        geminiAgent.on('interrupted', () => {
+            chatManager.finalizeStreamingMessage();
+            if (!chatManager.lastUserMessageType) {
+                chatManager.addUserAudioMessage();
+            }
+        });
+        
+        geminiAgent.on('turn_complete', () => {
+            chatManager.finalizeStreamingMessage();
+        });
+        
+        geminiAgent.connect();
+        
+        // setupEventListeners(geminiAgent);
+        
+        return geminiAgent;
+    } catch (error) {
+        console.error("Error initializing Gemini:", error);
+        return null;
+    }
 }
 
-function setupEventListeners(agent) {
-    const sendButton = document.getElementById('send-button');
-    const messageInput = document.getElementById('message-input');
-    const micButton = document.getElementById('mic-button');
-    const cameraButton = document.getElementById('camera-button');
-    const screenButton = document.getElementById('screen-button');
-    
-    // Send text message
-    sendButton.addEventListener('click', async () => {
-        const text = messageInput.value.trim();
-        if (text) {
-            await agent.sendText(text);
-            messageInput.value = '';
-        }
-    });
-    
-    // Handle Enter key in input
-    messageInput.addEventListener('keypress', async (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendButton.click();
-        }
-    });
-    
-    // Toggle microphone
-    micButton.addEventListener('click', async () => {
-        await agent.toggleMic();
-        micButton.classList.toggle('active');
-    });
-    
-    // Toggle camera
-    cameraButton.addEventListener('click', async () => {
-        if (cameraButton.classList.contains('active')) {
-            await agent.stopCameraCapture();
-        } else {
-            await agent.startCameraCapture();
-        }
-        cameraButton.classList.toggle('active');
-    });
-    
-    // Toggle screen sharing
-    screenButton.addEventListener('click', async () => {
-        if (screenButton.classList.contains('active')) {
-            await agent.stopScreenShare();
-        } else {
-            await agent.startScreenShare();
-        }
-        screenButton.classList.toggle('active');
-    });
-}
+// Don't auto-initialize on load, let our application control this
+// document.addEventListener('DOMContentLoaded', init);
 
-// Initialize the application when the DOM is fully loaded
-document.addEventListener('DOMContentLoaded', init);
+// Make these available globally
+window.GeminiAgent = GeminiAgent;
+window.ToolManager = ToolManager;
+window.getWebsocketUrl = getWebsocketUrl;
+window.getConfig = getConfig;
+window.initGemini = init;

@@ -21,27 +21,40 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
       setApiKey(savedApiKey);
     }
     
-    // Check if script.js is loaded
-    const checkScriptLoaded = () => {
-      if (typeof window !== 'undefined' && window.GeminiAgent) {
-        console.log("Gemini script is loaded and ready");
-        setScriptStatus('loaded');
-        setIsLoading(false);
-      } else {
-        console.log("Waiting for Gemini script to load...");
-        // Try to load the script directly
-        if (!document.querySelector('script[src="/src/script.js"]')) {
-          const script = document.createElement('script');
-          script.src = '/src/script.js';
-          script.async = true;
-          document.head.appendChild(script);
-          console.log("Attempted to load script.js manually");
+    // Load the script directly to ensure it's available
+    const loadScript = async () => {
+      try {
+        // Remove any existing script first
+        const existingScript = document.querySelector('script[src="/src/script.js"]');
+        if (existingScript) {
+          existingScript.remove();
         }
-        setTimeout(checkScriptLoaded, 500);
+        
+        // Create and add the script
+        const script = document.createElement('script');
+        script.src = '/src/script.js';
+        script.async = true;
+        document.head.appendChild(script);
+        
+        script.onload = () => {
+          console.log("Script loaded successfully");
+          setScriptStatus('loaded');
+          setIsLoading(false);
+        };
+        
+        script.onerror = (error) => {
+          console.error("Error loading script:", error);
+          setScriptStatus('error');
+          setIsLoading(false);
+        };
+      } catch (error) {
+        console.error("Error in script loading process:", error);
+        setScriptStatus('error');
+        setIsLoading(false);
       }
     };
     
-    checkScriptLoaded();
+    loadScript();
     
     return () => {
       // Cleanup
@@ -99,6 +112,7 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
         <div className="flex flex-col items-center">
           <Loader2 className="h-8 w-8 text-[#10A37F] animate-spin" />
           <p className="text-white mt-4">Loading Gemini components...</p>
+          <p className="text-gray-400 text-sm mt-2">Script status: {scriptStatus}</p>
         </div>
       </div>
     );

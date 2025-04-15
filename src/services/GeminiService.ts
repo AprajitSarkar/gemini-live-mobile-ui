@@ -17,6 +17,7 @@ declare global {
   interface Window {
     GeminiAgent: new (config: GeminiAgentConfig) => any;
     ToolManager: new () => any;
+    EventEmitter: any; // Add this to prevent conflicts
   }
 }
 
@@ -29,7 +30,6 @@ class GeminiService extends EventEmitter {
   
   constructor() {
     super();
-    // We'll check for script loading in the initialize method
   }
   
   private checkScriptLoaded(): boolean {
@@ -74,11 +74,19 @@ class GeminiService extends EventEmitter {
       script.onload = () => {
         console.log("script.js loaded successfully");
         
+        // Ensure the API key is set in localStorage before checking
+        const apiKey = localStorage.getItem('apiKey');
+        if (!apiKey) {
+          console.error("No API key found in localStorage after script load");
+          resolve(false);
+          return;
+        }
+        
         // Wait a bit for the script to initialize
         setTimeout(() => {
           this.scriptLoaded = this.checkScriptLoaded();
           resolve(this.scriptLoaded);
-        }, 500);
+        }, 1000); // Increased timeout for better initialization
       };
       
       script.onerror = () => {
@@ -139,7 +147,12 @@ class GeminiService extends EventEmitter {
         }
       };
       
-      const toolManager = new window.ToolManager();
+      // This might be null if script didn't load properly
+      if (!window.ToolManager) {
+        console.error("ToolManager not found. Continuing without tools.");
+      }
+      
+      const toolManager = window.ToolManager ? new window.ToolManager() : null;
       
       this.agent = new window.GeminiAgent({
         url,
