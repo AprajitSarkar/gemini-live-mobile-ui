@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import ApiKeyScreen from './pages/ApiKeyScreen';
 import HomeScreen from './pages/HomeScreen';
 import ConversationScreen from './pages/ConversationScreen';
@@ -96,13 +95,11 @@ const App = () => {
   };
 
   return (
-    <TooltipProvider>
-      <div className="min-h-screen bg-[#1A1A1A]">
-        {renderScreen()}
-        <Toaster />
-        <Sonner />
-      </div>
-    </TooltipProvider>
+    <div className="min-h-screen bg-[#1A1A1A]">
+      {renderScreen()}
+      <Toaster />
+      <Sonner />
+    </div>
   );
 };
 
