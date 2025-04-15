@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ApiKeyScreenProps } from '@/types/gemini';
 import { Bot, Key } from 'lucide-react';
+import { geminiService } from '@/services/GeminiService';
+import { toast } from '@/hooks/use-toast';
 
 const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
   const [apiKey, setApiKey] = useState('');
@@ -11,19 +13,44 @@ const ApiKeyScreen: React.FC<ApiKeyScreenProps> = ({ onValidApiKey }) => {
   const [error, setError] = useState('');
 
   const handleValidation = async () => {
+    if (!apiKey.trim()) {
+      setError('API key is required');
+      return;
+    }
+    
     setIsValidating(true);
     setError('');
     
-    // TODO: Replace with actual Gemini API key validation
     try {
-      // Simulated validation
-      if (apiKey.length > 20) {
+      // Initialize the GeminiService with the provided API key
+      const isInitialized = await geminiService.initialize(apiKey);
+      
+      if (isInitialized) {
+        // Save API key to localStorage for persistence
+        localStorage.setItem('apiKey', apiKey);
+        
+        // Notify the parent component
         onValidApiKey(apiKey);
+        
+        toast({
+          title: "API Key validated",
+          description: "Your API key has been successfully validated.",
+        });
       } else {
-        setError('Invalid API Key');
+        setError('Failed to initialize Gemini service');
+        toast({
+          title: "Validation failed",
+          description: "Could not initialize Gemini service. Please check your API key.",
+          variant: "destructive",
+        });
       }
     } catch (err) {
-      setError('Connection error');
+      setError('Error validating API key');
+      toast({
+        title: "Validation error",
+        description: "Error occurred during validation. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsValidating(false);
     }

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { VoiceVisualizerProps } from '@/types/gemini';
 
@@ -7,20 +7,36 @@ export const VoiceVisualizer: React.FC<VoiceVisualizerProps> = ({
   isActive, 
   intensity = 0.5 
 }) => {
+  const [bars, setBars] = useState([0.4, 0.6, 0.5]);
+  
+  // Animate the bars when active
+  useEffect(() => {
+    if (!isActive) return;
+    
+    const interval = setInterval(() => {
+      setBars(prev => 
+        prev.map(() => 
+          // Create a smooth, random animation effect
+          Math.min(0.9, Math.max(0.2, intensity * (Math.random() * 0.5 + 0.7)))
+        )
+      );
+    }, 250);
+    
+    return () => clearInterval(interval);
+  }, [isActive, intensity]);
+  
   return (
     <div className={cn(
       "flex items-center space-x-1 h-4 transition-all duration-300",
       isActive ? "opacity-100" : "opacity-30"
     )}>
-      {[1, 2, 3].map((bar) => (
+      {bars.map((height, index) => (
         <div 
-          key={bar} 
-          className={cn(
-            "w-1 bg-green-500 rounded-full transition-all duration-300 ease-in-out",
-            isActive ? `h-${bar * 2}` : "h-1"
-          )}
+          key={index} 
+          className="w-1 bg-green-500 rounded-full transition-all duration-300 ease-in-out"
           style={{ 
-            height: isActive ? `${bar * intensity * 8}px` : '4px' 
+            height: isActive ? `${Math.round(height * 16)}px` : '4px',
+            animationDelay: `${index * 0.1}s`
           }}
         />
       ))}
